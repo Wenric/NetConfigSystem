@@ -1,0 +1,638 @@
+{% extends 'NetworkConfigurationApp/base.html' %}
+
+{% block title %} Dashboard {% endblock %}
+
+{% block content %}
+<div class="container h-100 d-flex flex-column mt-4">
+    <div class="row pt-3">
+        <!-- Pending Approvals Card -->
+        <div class="col-md-2 mb-3">
+            <div class="card p-3 h-100">
+                <div class="stats-card text-center">
+                    <h5>Pending Approvals</h5>
+                    <h1>{{ pending_approvals_count }}</h1>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status BCC Card -->
+        <div class="col-md-5 mb-3">
+            <div class="card p-3 h-100">
+                <div class="stats-card text-center">
+                    <h5>Status BCC</h5>
+                    <div class="row">
+                        <div class="col">
+                            <h1 style="color: green;">{{ status_bcc_done_count }}</h1>
+                            <p>DONE</p>
+                        </div>
+                        <div class="col">
+                            <h1 style="color: orange;">{{ status_bcc_pending_count }}</h1>
+                            <p>PENDING</p>
+                        </div>
+                        <div class="col">
+                            <h1 style="color: red;">{{ status_bcc_void_count }}</h1>
+                            <p>VOID</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Route Card -->
+        <div class="col-md-5 mb-3">
+            <div class="card p-3 h-100">
+                <div class="stats-card text-center">
+                    <h5>Status Route</h5>
+                    <div class="row">
+                        <div class="col">
+                            <h1 style="color: green;">{{ status_route_done_count }}</h1>
+                            <p>DONE</p>
+                        </div>
+                        <div class="col">
+                            <h1 style="color: orange;">{{ status_route_pending_count }}</h1>
+                            <p>PENDING</p>
+                        </div>
+                        <div class="col">
+                            <h1 style="color: red;">{{ status_route_void_count }}</h1>
+                            <p>VOID</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- The rest of your content -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card p-3">
+                <div class="table-responsive" style="overflow-y: auto;">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col">CONFIG #</th>
+                                <th scope="col">DATE</th>
+                                <th scope="col">STATUS BCC</th>
+                                <th scope="col">STATUS ROUTE</th>
+                                <th scope="col">APPROVAL STATUS</th>
+                                <th scope="col">DHCP CLUSTER</th>
+                                <th scope="col">OLT NAME</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for config in configs %}
+                            <tr>
+                                <td>{{ config.config_number }}</td>
+                                <td>{{ config.date_assigned }}</td>
+                                <td>
+                                    <span style="color: {% if config.status_bcc|upper == 'VOID' %}red{% elif config.status_bcc|upper == 'PENDING' %}orange{% elif config.status_bcc|upper == 'DONE' %}green{% endif %}; font-weight: bold;">
+                                        {{ config.status_bcc|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="color: {% if config.status_route|upper == 'VOID' %}red{% elif config.status_route|upper == 'PENDING' %}orange{% elif config.status_route|upper == 'DONE' %}green{% endif %}; font-weight: bold;">
+                                        {{ config.status_route|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="color: {% if config.approval_status|upper == 'DENIED' %}red{% elif config.approval_status|upper == 'PENDING' %}orange{% elif config.approval_status|upper == 'APPROVED' %}green{% endif %}; font-weight: bold;">
+                                        {{ config.approval_status|upper }}
+                                    </span>
+                                </td>
+                                <td>{{ config.dhcp_cluster }}</td>
+                                <td>{{ config.olt_name }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-custom btn-sm" data-bs-toggle="modal" data-bs-target="#viewConfigModal-{{ config.config_number }}">
+                                        View Details
+                                    </button>
+                                    <button class="btn btn-custom btn-sm" data-bs-toggle="modal" data-bs-target="#editConfigModal-{{ config.config_number }}">
+                                        Edit Details
+                                    </button>
+                                </td>
+                            </tr>     
+                            {% endfor %}
+
+                            {% for config in configs %}
+                            <!-- Edit Network Configuration Modal -->
+                            <div class="modal fade" id="editConfigModal-{{ config.config_number }}" tabindex="-1" aria-labelledby="editConfigModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <form method="POST" action="{% url 'edit_network_config' config.config_number %}" id="editConfigForm-{{ config.config_number }}" class="editConfigForm">
+                                            {% csrf_token %}
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="editConfigModalLabel">Edit Network Configuration</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="container-fluid">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="device_group">Device Group</label>
+                                                                <select class="form-control" id="device_group" name="device_group" required>
+                                                                    {% for group in device_groups %}
+                                                                    <option value="{{ group.id }}" {% if config.device_group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                                <div class="invalid-feedback">
+                                                                    Please select a Device Group.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="dhcp_cluster">DHCP Cluster</label>
+                                                                <select class="form-control" id="dhcp_cluster" name="dhcp_cluster" required>
+                                                                    {% for cluster in dhcp_clusters %}
+                                                                    <option value="{{ cluster.id }}" {% if config.dhcp_cluster.id == cluster.id %}selected{% endif %}>{{ cluster.name }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                                <div class="invalid-feedback">
+                                                                    Please select a DHCP Cluster.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="olt_name">OLT Name</label>
+                                                                <input type="text" class="form-control" id="olt_name" name="olt_name" value="{{ config.olt_name }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter the OLT Name.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="mgmt_vlan100">MGMT - VLAN100</label>
+                                                                <input type="text" class="form-control" id="mgmt_vlan100" name="mgmt_vlan100" value="{{ config.mgmt_vlan100 }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 address for MGMT - VLAN100.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="mgmt_netmask">MGMT Netmask</label>
+                                                                <input type="text" class="form-control" id="mgmt_netmask" name="mgmt_netmask" value="{{ config.mgmt_netmask }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 netmask for MGMT Netmask.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="mgmt_subnet">MGMT Subnet</label>
+                                                                <input type="text" class="form-control" id="mgmt_subnet" name="mgmt_subnet" value="{{ config.mgmt_subnet }}" required maxlength="2">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid prefix length (0-32) for MGMT Subnet.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="cpe_vlan10">CPE - VLAN10</label>
+                                                                <input type="text" class="form-control" id="cpe_vlan10" name="cpe_vlan10" value="{{ config.cpe_vlan10 }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 address for CPE - VLAN10.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="cpe_netmask">CPE Netmask</label>
+                                                                <input type="text" class="form-control" id="cpe_netmask" name="cpe_netmask" value="{{ config.cpe_netmask }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 netmask for CPE Netmask.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="cpe_subnet">CPE Subnet</label>
+                                                                <input type="text" class="form-control" id="cpe_subnet" name="cpe_subnet" value="{{ config.cpe_subnet }}" required maxlength="2">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid prefix length (0-32) for CPE Subnet.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="site">Site</label>
+                                                                <input type="text" class="form-control" id="site" name="site" value="{{ config.site }}" maxlength="100">
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="p2p_primary">P2P - Primary</label>
+                                                                <input type="text" class="form-control" id="p2p_primary" name="p2p_primary" value="{{ config.p2p_primary }}" required maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 address for P2P - Primary.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="p2p_secondary">P2P - Secondary</label>
+                                                                <input type="text" class="form-control" id="p2p_secondary" name="p2p_secondary" value="{{ config.p2p_secondary }}" maxlength="100">
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a valid IPv4 address for P2P - Secondary or leave it empty.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="status_route">Status Route</label>
+                                                                <select class="form-control" id="status_route" name="status_route" required>
+                                                                    <option value="done" {% if config.status_route == 'done' %}selected{% endif %}>DONE</option>
+                                                                    <option value="void" {% if config.status_route == 'void' %}selected{% endif %}>VOID</option>
+                                                                    <option value="pending" {% if config.status_route == 'pending' %}selected{% endif %}>PENDING</option>
+                                                                </select>
+                                                                <div class="invalid-feedback">
+                                                                    Please select a status for the route.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="status_bcc">Status BCC</label>
+                                                                <select class="form-control" id="status_bcc" name="status_bcc" required>
+                                                                    <option value="done" {% if config.status_bcc == 'done' %}selected{% endif %}>DONE</option>
+                                                                    <option value="void" {% if config.status_bcc == 'void' %}selected{% endif %}>VOID</option>
+                                                                    <option value="pending" {% if config.status_bcc == 'pending' %}selected{% endif %}>PENDING</option>
+                                                                </select>
+                                                                <div class="invalid-feedback">
+                                                                    Please select a status for the BCC.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="form-group">
+                                                                <label for="date_assigned">Date Assigned</label>
+                                                                <input type="date" class="form-control" id="date_assigned" name="date_assigned" value="{{ config.date_assigned|date:'Y-m-d' }}" required>
+                                                                <div class="invalid-feedback">
+                                                                    Please enter a date.
+                                                                </div>
+                                                            </div>                                                    
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer d-flex justify-content-between">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Update Config</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modals for viewing network configurations -->
+                            <div class="modal fade" id="viewConfigModal-{{ config.config_number }}" tabindex="-1" aria-labelledby="viewConfigModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="viewConfigModalLabel">View Network Configuration</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <p><strong>Status BCC:</strong> <span style="color: {% if config.status_bcc|upper == 'PENDING' %}orange{% elif config.status_bcc|upper == 'DONE' %}green{% else %}red{% endif %}; font-weight: bold;">{{ config.status_bcc|upper }}</span></p>
+                                                        <p><strong>Status Route:</strong> <span style="color: {% if config.status_route|upper == 'PENDING' %}orange{% elif config.status_route|upper == 'DONE' %}green{% else %}red{% endif %}; font-weight: bold;">{{ config.status_route|upper }}</span></p>
+                                                        <p><strong>Device Group:</strong> {{ config.device_group }}</p>
+                                                        <p><strong>DHCP Cluster:</strong> {{ config.dhcp_cluster }}</p>
+                                                        <p><strong>OLT Name:</strong> {{ config.olt_name }}</p>
+                                                        <p><strong>Site:</strong> {{ config.site }}</p>
+                                                        <p><strong>Primary P2P:</strong> {{ config.p2p_primary }}</p>
+                                                        <p><strong>Secondary P2P:</strong> {{ config.p2p_secondary|default:"N/A" }}</p>
+                                                        <p><strong>Submitted by:</strong> {{ config.submitted_by.username }} </p>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <h6>MGMT</h6>
+                                                        <ul>
+                                                            <li><strong>VLAN100:</strong> {{ config.mgmt_vlan100 }}</li>
+                                                            <li><strong>Subnet:</strong> {{ config.mgmt_subnet }}</li>
+                                                            <li><strong>IP Range:</strong> {{ config.mgmt_ip_range }}</li>
+                                                            <li><strong>Netmask:</strong> {{ config.mgmt_netmask }}</li>
+                                                            <li><strong>Size:</strong> {{ config.mgmt_size }}</li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <h6>CPE</h6>
+                                                        <ul>
+                                                            <li><strong>VLAN10:</strong> {{ config.cpe_vlan10 }}</li>
+                                                            <li><strong>Subnet:</strong> {{ config.cpe_subnet }}</li>
+                                                            <li><strong>IP Range:</strong> {{ config.cpe_ip_range }}</li>
+                                                            <li><strong>Netmask:</strong> {{ config.cpe_netmask }}</li>
+                                                            <li><strong>Size:</strong> {{ config.cpe_size }}</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer justify-content-between">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            {% if is_admin %}
+                                            <div>
+                                                <a href="{% url 'change_approval_status' config.config_number 'DENIED' %}" class="btn btn-danger">Deny</a>
+                                                <a href="{% url 'change_approval_status' config.config_number 'APPROVED' %}" class="btn btn-success">Approve</a>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="d-flex justify-content-end">
+                        <!-- Trigger button for adding configuration -->
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">Add Config</button>
+                    </div>
+                    <!-- Modal for adding network configuration -->
+                    <div class="modal fade" id="addConfigModal" tabindex="-1" aria-labelledby="addConfigModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <form method="POST" action="{% url 'add_network_config' %}" id="addConfigForm">
+                                    {% csrf_token %}
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="addConfigModalLabel">Add Network Configuration</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="container-fluid">
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="device_group">Device Group</label>
+                                                        <select class="form-control" id="device_group" name="device_group" required>
+                                                            {% for group in device_groups %}
+                                                            <option value="{{ group.id }}">{{ group.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <div class="invalid-feedback">
+                                                            Please select a device group.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="dhcp_cluster">DHCP Cluster</label>
+                                                        <select class="form-control" id="dhcp_cluster" name="dhcp_cluster" required>
+                                                            {% for cluster in dhcp_clusters %}
+                                                            <option value="{{ cluster.id }}">{{ cluster.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <div class="invalid-feedback">
+                                                            Please select a DHCP cluster.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="olt_name">OLT Name</label>
+                                                        <input type="text" class="form-control" id="olt_name" name="olt_name" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter an OLT name.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="mgmt_vlan100">MGMT - VLAN100</label>
+                                                        <input type="text" class="form-control" id="mgmt_vlan100" name="mgmt_vlan100" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 address for MGMT - VLAN100.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="mgmt_netmask">MGMT Netmask</label>
+                                                        <input type="text" class="form-control" id="mgmt_netmask" name="mgmt_netmask" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 netmask for MGMT Netmask.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="mgmt_subnet">MGMT Subnet</label>
+                                                        <input type="text" class="form-control" id="mgmt_subnet" name="mgmt_subnet" required maxlength="2">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid prefix length (0-32) for MGMT Subnet.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="cpe_vlan10">CPE - VLAN10</label>
+                                                        <input type="text" class="form-control" id="cpe_vlan10" name="cpe_vlan10" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 address for CPE - VLAN10.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="cpe_netmask">CPE Netmask</label>
+                                                        <input type="text" class="form-control" id="cpe_netmask" name="cpe_netmask" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 netmask for CPE Netmask.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="cpe_subnet">CPE Subnet</label>
+                                                        <input type="text" class="form-control" id="cpe_subnet" name="cpe_subnet" required maxlength="2">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid prefix length (0-32) for CPE Subnet.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="site">Site</label>
+                                                        <input type="text" class="form-control" id="site" name="site" maxlength="100">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="p2p_primary">P2P - Primary</label>
+                                                        <input type="text" class="form-control" id="p2p_primary" name="p2p_primary" required maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 address for P2P - Primary.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="p2p_secondary">P2P - Secondary</label>
+                                                        <input type="text" class="form-control" id="p2p_secondary" name="p2p_secondary" maxlength="100">
+                                                        <div class="invalid-feedback">
+                                                            Please enter a valid IPv4 address for P2P - Secondary or leave it empty.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="status_route">Status Route</label>
+                                                        <select class="form-control" id="status_route" name="status_route" required>
+                                                            <option value="done">DONE</option>
+                                                            <option value="void">VOID</option>
+                                                            <option value="pending">PENDING</option>
+                                                        </select>
+                                                        <div class="invalid-feedback">
+                                                            Please select a status for the route.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="status_bcc">Status BCC</label>
+                                                        <select class="form-control" id="status_bcc" name="status_bcc" required>
+                                                            <option value="done">DONE</option>
+                                                            <option value="void">VOID</option>
+                                                            <option value="pending">PENDING</option>
+                                                        </select>
+                                                        <div class="invalid-feedback">
+                                                            Please select a status for the BCC.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label for="date_assigned">Date Assigned</label>
+                                                        <input type="date" class="form-control" id="date_assigned" name="date_assigned" required>
+                                                        <div class="invalid-feedback">
+                                                            Please select a date.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Add Config</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+    function isValidIPv4Address(value) {
+        const ipv4Pattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        return ipv4Pattern.test(value);
+    }
+
+    function isValidSubnet(value) {
+        const subnetPattern = /^([0-9]|[1-2][0-9]|3[0-2])$/;
+        return subnetPattern.test(value);
+    }
+
+    function validateForm(form) {
+        let isValid = true;
+        form.querySelectorAll('input').forEach(input => {
+            if (input.name === 'mgmt_vlan100' || input.name === 'cpe_vlan10' || input.name === 'mgmt_netmask' || input.name === 'cpe_netmask' || input.name === 'p2p_primary' || input.name === 'p2p_secondary') {
+                if (input.value && !isValidIPv4Address(input.value)) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            } else if (input.name === 'mgmt_subnet' || input.name === 'cpe_subnet') {
+                if (!isValidSubnet(input.value)) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            } else {
+                if (!input.value) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            }
+        });
+        return isValid;
+    }
+
+    function validateEditForm(form) {
+        let isValid = true;
+        form.querySelectorAll('input').forEach(input => {
+            if (input.name === 'mgmt_vlan100' || input.name === 'cpe_vlan10' || input.name === 'mgmt_netmask' || input.name === 'cpe_netmask' || input.name === 'p2p_primary' || input.name === 'p2p_secondary') {
+                if (input.value && !isValidIPv4Address(input.value)) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            } else if (input.name === 'mgmt_subnet' || input.name === 'cpe_subnet') {
+                if (!isValidSubnet(input.value)) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            } else {
+                if (!input.value) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            }
+        });
+        return isValid;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const addConfigForm = document.getElementById('addConfigForm');
+        const editConfigForms = document.querySelectorAll('.editConfigForm');
+
+        if (addConfigForm) {
+            addConfigForm.addEventListener('submit', function (event) {
+                if (!validateForm(addConfigForm)) {
+                    event.preventDefault();
+                }
+            });
+        }
+
+        editConfigForms.forEach(form => {
+            form.addEventListener('submit', function (event) {
+                if (!validateEditForm(form)) {
+                    event.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
